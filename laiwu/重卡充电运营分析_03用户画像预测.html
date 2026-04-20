@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>用户画像预测功能原型</title>
+  <link rel="stylesheet" href="重卡充电运营分析_共享样式.css" />
+  <style>
+    .station-profile-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .station-profile-row {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(8, 20, 35, 0.52);
+    }
+
+    .station-profile-head,
+    .station-profile-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 10px 16px;
+      align-items: center;
+    }
+
+    .station-profile-stack {
+      display: flex;
+      min-height: 34px;
+      overflow: hidden;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .station-profile-stack span {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+      padding: 0 8px;
+      color: #10253d;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .station-profile-metrics {
+      color: rgba(237, 244, 239, 0.72);
+      font-size: 13px;
+    }
+
+    .behavior-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .behavior-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(8, 20, 35, 0.52);
+    }
+
+    @media (max-width: 720px) {
+      .behavior-row,
+      .station-profile-stack {
+        flex-direction: column;
+      }
+
+      .behavior-row {
+        align-items: stretch;
+      }
+
+      .station-profile-stack span {
+        min-height: 30px;
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <section class="brand-panel">
+        <div class="eyebrow">Function Page 03</div>
+        <h1>用户画像与行为预测</h1>
+        <p class="subtitle">本页对应规范书中的“重卡用户群体画像与行为预测”功能，重点演示按充电时段、频率、电量等行为数据分群，并预测未来短期内各站点的需求总量和时序分布。</p>
+        <nav class="site-nav" id="pageNav"></nav>
+      </section>
+      <section class="scenario-panel">
+        <div class="scenario-head">
+          <div>
+            <h2 class="scenario-title" id="scenarioTitle">模拟场景</h2>
+            <div class="scenario-note" id="scenarioNote">模拟数据说明</div>
+          </div>
+          <div class="scenario-switch" id="scenarioSwitch"></div>
+        </div>
+        <div class="meta-grid" id="metaGrid"></div>
+      </section>
+    </header>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">用户分群与行为特征</h3>
+          <div class="panel-desc">按规范书要求，围绕充电时段、频率、电量等行为数据进行分群，并输出可用于需求预测的标签结果。</div>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="pill-row" id="segmentSwitch"></div>
+        <div class="two-col">
+          <div class="card-grid">
+            <div class="summary-card">
+              <div class="label">当前群体</div>
+              <div class="value" id="segmentName" style="font-size:28px;font-weight:700;"></div>
+              <div class="desc" id="segmentDesc"></div>
+            </div>
+            <div class="stat-grid" id="segmentStats"></div>
+          </div>
+          <div class="card-grid">
+            <div class="info-card"><div class="label">分群依据</div><strong id="segmentBasis"></strong><p class="muted">明确按时段、频率、电量进行行为分群，不只是静态标签展示。</p></div>
+            <div class="info-card"><div class="label">需求结构判断</div><strong id="segmentDemand"></strong><p class="muted">用于支撑站点需求总量和时序分布预测。</p></div>
+            <div class="info-card"><div class="label">引导方式</div><strong id="segmentGuide"></strong><p class="muted">结合柔性水平和偏好特征生成运营引导建议。</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:18px;">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">各充电站用户群体分布及指标</h3>
+          <div class="panel-desc">增加按站点查看的用户群体构成、活跃车次、户均电量、柔性用户占比和短期需求指标。</div>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="station-profile-list" id="stationProfileList"></div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:18px;">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">未来短期行为预测</h3>
+          <div class="panel-desc">突出未来短期的到站窗口、站点迁移、排队风险和柔性引导，不再展示意义较弱的时序曲线。</div>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="card-grid" id="behaviorCards"></div>
+        <div class="behavior-list" id="behaviorList"></div>
+      </div>
+    </section>
+
+    <section class="two-col" style="margin-top:18px;">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-title">分群结果与站点偏好</h3>
+            <div class="panel-desc">反映不同用户群体对站点的选择倾向，同时支撑后续各站点需求总量预测。</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="bar-list" id="stationPrefs"></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-title">短期需求时序分布</h3>
+            <div class="panel-desc">对应规范书中的未来短期需求时序分布预测，反映各群体未来短期补能时段集中方向。</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="bar-list" id="timePrefs"></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel" style="margin-top:18px;">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">各站点未来短期需求预测</h3>
+          <div class="panel-desc">这里对应规范书中“预测未来短期内各站点的充电需求总量和时序分布”，展示站点级短期需求总量预测结果。</div>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="table-grid" id="demandTable"></div>
+      </div>
+    </section>
+  </div>
+
+  <script src="重卡充电运营分析_共享数据.js"></script>
+  <script>
+    const App = window.HeavyTruckDashboard;
+    const state = { segmentIndex: 0 };
+
+    const segmentBasisMap = {
+      "跨省长途型": "夜间/凌晨充电占比高、单次充电量大、日均频次较低",
+      "区域配送型": "上午/晚前补能明显、充电频次较高、单次电量中等",
+      "园区固定型": "午间补能集中、充电频次高、单次电量相对稳定"
+    };
+
+    const segmentColorMap = {
+      "区域配送型": "#b9e769",
+      "跨省长途型": "#68d6c9",
+      "园区固定型": "#ffbd59"
+    };
+
+    const timeWindowMap = {
+      "凌晨补能": "00:00-06:00",
+      "上午补能": "06:00-11:00",
+      "午间补能": "11:00-14:00",
+      "晚高峰前": "16:00-18:00",
+      "晚间补能": "18:00-22:00",
+      "夜间集中": "18:00-24:00"
+    };
+
+    function normalizeShares(items) {
+      const total = items.reduce((sum, item) => sum + item.score, 0) || 1;
+      const rows = items.map((item) => {
+        const raw = item.score / total * 100;
+        return { ...item, share: Math.floor(raw), remainder: raw - Math.floor(raw) };
+      });
+      let diff = 100 - rows.reduce((sum, item) => sum + item.share, 0);
+      rows.slice().sort((a, b) => b.remainder - a.remainder).forEach((item) => {
+        if (diff <= 0) return;
+        item.share += 1;
+        diff -= 1;
+      });
+      return rows;
+    }
+
+    function buildStationProfiles(scenario, stationDemandBase) {
+      return scenario.stations.map((station, index) => {
+        const scores = normalizeShares(scenario.segments.map((segment) => {
+          const insight = App.segmentInsights[segment.label];
+          const prefShare = (insight.stationPrefs.find((item) => item.name === station.name) || {}).share || 0;
+          const affinity =
+            segment.label.includes("长途") && /钢城|口镇/.test(station.name) ? 14 :
+            segment.label.includes("配送") && /凤城|高新区/.test(station.name) ? 12 :
+            segment.label.includes("园区") && /口镇|凤城/.test(station.name) ? 10 : 4;
+          return { segment, insight, score: Math.max(6, prefShare + affinity + segment.value * 0.25) };
+        }));
+
+        const dominant = scores.slice().sort((a, b) => b.share - a.share)[0];
+        const avgEnergy = Math.round(scores.reduce((sum, item) => sum + item.share * App.numericValue(item.insight.avgEnergy), 0) / 100);
+        const flexibleShare = scores
+          .filter((item) => ["高", "中高"].includes(item.insight.flexibility))
+          .reduce((sum, item) => sum + item.share, 0);
+        const topTime = dominant.insight.timePrefs.slice().sort((a, b) => b.share - a.share)[0];
+        return {
+          stationName: station.name,
+          dominantSegment: dominant.segment.label,
+          peakWindow: timeWindowMap[topTime.name] || topTime.name,
+          activeTrips: Math.max(8, Math.round(App.numericValue(station.load) * 4.8 + station.progress * 0.18)),
+          avgEnergy: `${avgEnergy} kWh`,
+          flexibleShare: `${flexibleShare}%`,
+          demand: stationDemandBase[index].total,
+          segments: scores.map((item) => ({
+            name: item.segment.label,
+            share: item.share,
+            color: segmentColorMap[item.segment.label] || item.segment.color || "#6f9be8"
+          }))
+        };
+      });
+    }
+
+    function buildBehaviorPrediction(segment, stationProfiles, stationDemandBase) {
+      const topTime = segment.timePrefs.slice().sort((a, b) => b.share - a.share)[0];
+      const topStation = segment.stationPrefs[0] || { name: "-" };
+      const predictedTrips = stationProfiles.reduce((sum, item) => {
+        const current = item.segments.find((row) => row.name === segment.label);
+        return sum + Math.round(item.activeTrips * ((current && current.share) || 0) / 100);
+      }, 0);
+      const predictedDemand = stationProfiles.reduce((sum, item, index) => {
+        const current = item.segments.find((row) => row.name === segment.label);
+        return sum + App.numericValue(stationDemandBase[index].total) * ((current && current.share) || 0) / 100;
+      }, 0);
+      const riskStation = stationProfiles
+        .slice()
+        .sort((a, b) => App.numericValue(b.demand) - App.numericValue(a.demand))[0];
+      const diversionStation = stationProfiles
+        .filter((item) => item.stationName !== topStation.name)
+        .slice()
+        .sort((a, b) => App.numericValue(b.flexibleShare) - App.numericValue(a.flexibleShare))[0] || riskStation;
+
+      return {
+        cards: [
+          { label: "主到站窗口", value: topTime.name, sub: `预计占当前群体 ${topTime.share}%` },
+          { label: "预计活跃车次", value: `${predictedTrips} 车次`, sub: `未来4小时需求约 ${predictedDemand.toFixed(1)} MWh` },
+          { label: "重点迁移方向", value: `${topStation.name} -> ${diversionStation.stationName}`, sub: "并发抬升后的优先分流路径" },
+          { label: "排队风险站点", value: riskStation.stationName, sub: `${riskStation.peakWindow} 容易形成排队` }
+        ],
+        actions: [
+          {
+            title: "到站行为预测",
+            value: `${topTime.name}集中`,
+            desc: `${segment.label} 未来4小时预计在 ${topTime.name} 集中到站，活跃规模约 ${predictedTrips} 车次。`
+          },
+          {
+            title: "站点选择预测",
+            value: `${topStation.name}`,
+            desc: `首选站点仍为 ${topStation.name}，当并发升高时预计将向 ${diversionStation.stationName} 分流。`
+          },
+          {
+            title: "排队风险预测",
+            value: riskStation.demand,
+            desc: `${riskStation.stationName} 在 ${riskStation.peakWindow} 的短期需求最高，需要提前预留排队和功率控制。`
+          },
+          {
+            title: "柔性引导预测",
+            value: diversionStation.flexibleShare,
+            desc: `${diversionStation.stationName} 的柔性用户占比较高，更适合承接预约错峰和价格引导订单。`
+          }
+        ]
+      };
+    }
+
+    function renderPage(key) {
+      const scenario = App.getScenario(key);
+      const segment = scenario.segments[state.segmentIndex];
+      const insight = App.segmentInsights[segment.label];
+      const preferredSlot = insight.timePrefs.reduce((max, current) => current.share > max.share ? current : max, insight.timePrefs[0]);
+      document.getElementById("scenarioTitle").textContent = scenario.title;
+      document.getElementById("scenarioNote").textContent = scenario.note;
+      App.renderMeta(document.getElementById("metaGrid"), scenario);
+
+      document.getElementById("segmentSwitch").innerHTML = scenario.segments.map((item, index) => `
+        <button class="pill-btn ${index === state.segmentIndex ? "active" : ""}" data-segment="${index}">${item.label}</button>
+      `).join("");
+
+      document.getElementById("segmentName").textContent = segment.label;
+      document.getElementById("segmentDesc").textContent = `当前场景贡献占比 ${segment.value}% ，柔性水平 ${insight.flexibility}`;
+      document.getElementById("segmentStats").innerHTML = `
+        <div class="summary-card"><div class="label">群体占比</div><div class="value">${segment.value}%</div></div>
+        <div class="summary-card"><div class="label">单次平均充电量</div><div class="value">${insight.avgEnergy}</div></div>
+        <div class="summary-card"><div class="label">日均活跃频次</div><div class="value">${insight.freq}</div></div>
+      `;
+
+      document.getElementById("segmentBasis").textContent = segmentBasisMap[segment.label];
+      document.getElementById("segmentDemand").textContent = `${segment.label} 是当前场景的重要需求来源之一，可用于解释各站点未来短期需求总量和峰值形成机制。`;
+      document.getElementById("segmentGuide").textContent = insight.flexibility === "高" ? "预约错峰 + 午间引导" : insight.flexibility === "中高" ? "价格引导 + 分站分流" : "夜谷预约 + 保底策略";
+
+      document.getElementById("stationPrefs").innerHTML = insight.stationPrefs.map((item) => `
+        <div class="bar-row">
+          <strong>${item.name}</strong>
+          <div class="bar-track"><b style="width:${item.share}%;"></b></div>
+          <span>${item.share}%</span>
+        </div>
+      `).join("");
+
+      document.getElementById("timePrefs").innerHTML = insight.timePrefs.map((item) => `
+        <div class="bar-row">
+          <strong>${item.name}</strong>
+          <div class="bar-track"><b style="width:${item.share}%;"></b></div>
+          <span>${item.share}%</span>
+        </div>
+      `).join("");
+
+      const stationDemandBase = scenario.stations.map((item, index) => {
+        const pref = insight.stationPrefs[index] ? insight.stationPrefs[index].share : Math.max(18, 40 - index * 8);
+        const next4h = (parseFloat(item.load) * (segment.value / 100) * (0.78 + pref / 100)).toFixed(1);
+        return {
+          name: item.name,
+          total: `${next4h} MWh`,
+          slot: preferredSlot.name,
+          users: `${Math.max(6, Math.round(pref / 3))} 车次`
+        };
+      });
+
+      const stationProfiles = buildStationProfiles(scenario, stationDemandBase);
+      const behavior = buildBehaviorPrediction(segment, stationProfiles, stationDemandBase);
+      document.getElementById("behaviorCards").innerHTML = behavior.cards.map((item) => `
+        <div class="summary-card">
+          <div class="label">${item.label}</div>
+          <div class="value" style="font-size:20px;">${item.value}</div>
+          <div class="desc">${item.sub}</div>
+        </div>
+      `).join("");
+      document.getElementById("behaviorList").innerHTML = behavior.actions.map((item) => `
+        <div class="behavior-row">
+          <div>
+            <strong>${item.title}</strong>
+            <div class="muted">${item.desc}</div>
+          </div>
+          <span class="tag">${item.value}</span>
+        </div>
+      `).join("");
+      document.getElementById("stationProfileList").innerHTML = stationProfiles.map((item) => `
+        <article class="station-profile-row">
+          <div class="station-profile-head">
+            <div>
+              <strong>${item.stationName}</strong>
+              <div class="muted">主导群体 ${item.dominantSegment} · 峰值窗口 ${item.peakWindow}</div>
+            </div>
+            <span class="tag">${item.flexibleShare} 柔性用户</span>
+          </div>
+          <div class="station-profile-stack">
+            ${item.segments.map((segment) => `
+              <span style="width:${segment.share}%;background:${segment.color};">${segment.name} ${segment.share}%</span>
+            `).join("")}
+          </div>
+          <div class="station-profile-metrics">
+            <span>日均活跃 ${item.activeTrips} 车次</span>
+            <span>户均电量 ${item.avgEnergy}</span>
+            <span>短期需求 ${item.demand}</span>
+          </div>
+        </article>
+      `).join("");
+
+      document.getElementById("demandTable").innerHTML = `
+        <div class="table-row header"><span>站点</span><span>未来4小时需求总量</span><span>主要时序分布</span><span>预计车次</span></div>
+        ${stationDemandBase.map((item) => `
+          <div class="table-row">
+            <strong>${item.name}</strong>
+            <span>${item.total}</span>
+            <span>${item.slot}</span>
+            <span>${item.users}</span>
+          </div>
+        `).join("")}
+      `;
+    }
+
+    document.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-segment]");
+      if (!button) return;
+      state.segmentIndex = Number(button.dataset.segment);
+      renderPage(App.getScenarioKey());
+    });
+
+    App.renderPageLinks(document.getElementById("pageNav"), "重卡充电运营分析_03用户画像预测.html");
+    App.renderScenarioSwitch(document.getElementById("scenarioSwitch"), renderPage);
+    renderPage(App.getScenarioKey());
+  </script>
+</body>
+</html>

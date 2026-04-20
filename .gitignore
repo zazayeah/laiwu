@@ -1,9 +1,9 @@
 .DS_Store
 
 # Frontend
-原型系统_vue版/node_modules/
-原型系统_vue版/dist/
-原型系统_vue版/.idea/
+laiwu_vue版/node_modules/
+laiwu_vue版/dist/
+laiwu_vue版/.idea/
 
 # Python
 __pycache__/
@@ -13,7 +13,7 @@ __pycache__/
 venv/
 
 # Java
-原型系统_backend_java/target/
+laiwu_backend_java/target/
 
 # Office and package artifacts not needed for system repo
 *.docx

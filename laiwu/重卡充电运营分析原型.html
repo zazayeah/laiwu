@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>重卡充电运营分析原型总览</title>
+  <link rel="stylesheet" href="重卡充电运营分析_共享样式.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <section class="brand-panel">
+        <div class="eyebrow">Heavy Truck Energy Intelligence</div>
+        <h1>重卡充电负荷精细化运营分析原型总览</h1>
+        <p class="subtitle">
+          当前已拆成“总览页 + 六个功能子页”。总览页负责展示核心指标、趋势、预警和模块入口；
+          子页分别对应规范书六大功能，可继续按甲方风格深化为正式专题界面。
+        </p>
+        <nav class="site-nav" id="pageNav"></nav>
+      </section>
+
+      <section class="scenario-panel">
+        <div class="scenario-head">
+          <div>
+            <h2 class="scenario-title" id="scenarioTitle">模拟场景</h2>
+            <div class="scenario-note" id="scenarioNote">模拟数据说明</div>
+          </div>
+          <div class="scenario-switch" id="scenarioSwitch"></div>
+        </div>
+        <div class="meta-grid" id="metaGrid"></div>
+      </section>
+    </header>
+
+    <section class="kpi-grid" id="kpiGrid"></section>
+
+    <section class="page-grid" id="moduleGrid"></section>
+
+    <section class="two-col">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-title">24小时负荷趋势与价格窗口</h3>
+            <div class="panel-desc">总览页保留全局趋势，用于快速感知当前场景的负荷变化、预测峰值和分时电价窗口。</div>
+          </div>
+          <div class="legend">
+            <span><i style="background:#68d6c9;"></i>实际负荷</span>
+            <span><i style="background:#b9e769;"></i>滚动预测</span>
+            <span><i style="background:#ffbd59;"></i>价格带</span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="chart-shell">
+            <svg id="loadChart" viewBox="0 0 920 360" aria-label="负荷趋势图"></svg>
+          </div>
+          <div class="chart-notes" id="chartNotes"></div>
+        </div>
+      </article>
+
+      <div class="card-grid">
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h3 class="panel-title">当前策略摘要</h3>
+              <div class="panel-desc">总览页只展示关键动作，详细模拟转到“调节潜力评估”和“辅助决策应用”子页。</div>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="list-grid" id="strategySummary"></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h3 class="panel-title">滚动预警摘要</h3>
+              <div class="panel-desc">聚焦站点利用率、峰段抬升和策略触发窗口。</div>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="list-grid" id="alertSummary"></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h3 class="panel-title">重点站点概览</h3>
+              <div class="panel-desc">详细画像和站点切换放在“负荷画像分析”子页，这里仅保留重点站点状态。</div>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="bar-list" id="stationSummary"></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <div class="footer-note">
+      <strong>说明：</strong>当前总览页与六个子页共用同一套场景数据。你在任意页面切换场景后，其他页面会沿用同一场景，便于连续演示。
+    </div>
+  </div>
+
+  <script src="重卡充电运营分析_共享数据.js"></script>
+  <script>
+    const App = window.HeavyTruckDashboard;
+
+    const modulePages = [
+      {
+        file: "重卡充电运营分析_01数据整合治理.html",
+        no: "01",
+        title: "数据整合治理",
+        desc: "演示多源接入、质量校验、规则治理和标准服务发布。"
+      },
+      {
+        file: "重卡充电运营分析_02负荷画像分析.html",
+        no: "02",
+        title: "负荷画像分析",
+        desc: "演示站点切换、峰谷特征、波动标签和典型模式识别。"
+      },
+      {
+        file: "重卡充电运营分析_03用户画像预测.html",
+        no: "03",
+        title: "用户画像预测",
+        desc: "演示用户分群、偏好分析和短期需求来源拆解。"
+      },
+      {
+        file: "重卡充电运营分析_04调节潜力评估.html",
+        no: "04",
+        title: "调节潜力评估",
+        desc: "演示服务约束、电价差和调节收益的动态测算。"
+      },
+      {
+        file: "重卡充电运营分析_05多尺度预测.html",
+        no: "05",
+        title: "多尺度预测",
+        desc: "演示 4 小时、24 小时和月度趋势的预测结果输出。"
+      },
+      {
+        file: "重卡充电运营分析_06辅助决策应用.html",
+        no: "06",
+        title: "辅助决策应用",
+        desc: "演示策略包、预警发布、日报输出和成果承载。"
+      }
+    ];
+
+    function renderOverview(key) {
+      const scenario = App.getScenario(key);
+      document.getElementById("scenarioTitle").textContent = scenario.title;
+      document.getElementById("scenarioNote").textContent = scenario.note;
+      App.renderMeta(document.getElementById("metaGrid"), scenario);
+      App.renderKpis(document.getElementById("kpiGrid"), scenario);
+      App.renderLoadChart(document.getElementById("loadChart"), scenario);
+
+      document.getElementById("moduleGrid").innerHTML = modulePages.map((item) => `
+        <a class="page-card" href="${item.file}">
+          <div class="index-chip">${item.no}</div>
+          <h3>${item.title}</h3>
+          <p>${item.desc}</p>
+          <div class="cta">进入子页查看功能演示</div>
+        </a>
+      `).join("");
+
+      document.getElementById("chartNotes").innerHTML = scenario.chartNotes.map((item) => `
+        <div class="summary-card">
+          <div class="label">${item.title}</div>
+          <div class="desc">${item.text}</div>
+        </div>
+      `).join("");
+
+      document.getElementById("strategySummary").innerHTML = scenario.strategies.map((item) => `
+        <div class="info-card">
+          <div class="label">${item.level}</div>
+          <strong>${item.name}</strong>
+          <p class="muted">${item.action}</p>
+          <div class="chip-row">
+            <span class="chip">${item.trigger}</span>
+            <span class="chip">${item.gain}</span>
+          </div>
+        </div>
+      `).join("");
+
+      document.getElementById("alertSummary").innerHTML = scenario.alerts.map((item) => `
+        <div class="info-card">
+          <div class="label">${item.time}</div>
+          <strong>${item.title}</strong>
+          <p class="muted">${item.text}</p>
+        </div>
+      `).join("");
+
+      document.getElementById("stationSummary").innerHTML = scenario.stations.map((item) => `
+        <div class="bar-row">
+          <strong>${item.name}</strong>
+          <div class="bar-track"><b style="width:${item.progress}%;"></b></div>
+          <span>${item.load} / ${item.use}</span>
+        </div>
+      `).join("");
+    }
+
+    App.renderPageLinks(document.getElementById("pageNav"), "重卡充电运营分析原型.html");
+    App.renderScenarioSwitch(document.getElementById("scenarioSwitch"), renderOverview);
+    renderOverview(App.getScenarioKey());
+  </script>
+</body>
+</html>

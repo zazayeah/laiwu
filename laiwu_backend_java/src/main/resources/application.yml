@@ -1,0 +1,10 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: laiwu-heavy-truck-dashboard-backend
+
+algorithm:
+  service:
+    base-url: http://localhost:8000/api

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>数据整合治理功能原型</title>
+  <link rel="stylesheet" href="重卡充电运营分析_共享样式.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <section class="brand-panel">
+        <div class="eyebrow">Function Page 01</div>
+        <h1>数据整合治理</h1>
+        <p class="subtitle">本页对应规范书中的“多源数据整合与治理”功能，重点演示数据接入、规则校验、质量异常和标准化数据服务发布。</p>
+        <nav class="site-nav" id="pageNav"></nav>
+      </section>
+      <section class="scenario-panel">
+        <div class="scenario-head">
+          <div>
+            <h2 class="scenario-title" id="scenarioTitle">模拟场景</h2>
+            <div class="scenario-note" id="scenarioNote">模拟数据说明</div>
+          </div>
+          <div class="scenario-switch" id="scenarioSwitch"></div>
+        </div>
+        <div class="meta-grid" id="metaGrid"></div>
+      </section>
+    </header>
+
+    <section class="kpi-grid" id="kpiGrid"></section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">数据源治理工作台</h3>
+          <div class="panel-desc">切换不同数据源后，可查看时效性、质量通过率、治理规则覆盖和标准服务输出。</div>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="pill-row" id="sourceSwitch"></div>
+        <div class="two-col">
+          <div class="card-grid">
+            <div class="summary-card">
+              <div class="label">当前数据源</div>
+              <div class="value" id="sourceName" style="font-size:28px;font-weight:700;"></div>
+              <div class="desc" id="sourceRules"></div>
+            </div>
+            <div class="stat-grid" id="sourceStats"></div>
+          </div>
+          <div class="card-grid">
+            <div class="chart-shell">
+              <svg id="governanceChart" viewBox="0 0 920 360" aria-label="治理质量趋势图"></svg>
+            </div>
+            <div class="info-card">
+              <div class="label">标准输出服务</div>
+              <strong id="sourceOutput"></strong>
+              <p class="muted">治理后数据将进入统一主题层，供画像、预测、调节和辅助决策模块复用。</p>
+              <div class="chip-row">
+                <span class="chip">ODS 原始层</span>
+                <span class="chip">主题宽表</span>
+                <span class="chip">数据服务接口</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-notes" id="governanceNotes"></div>
+      </div>
+    </section>
+
+    <section class="two-col" style="margin-top:18px;">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-title">质量校验结果</h3>
+            <div class="panel-desc">示例展示字段级校验、异常数量和自动修复动作。</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="table-grid" id="qualityTable"></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-title">数据链路与主题建模</h3>
+            <div class="panel-desc">对应规范书中的接入、清洗、治理、转换、关联分析和标准化数据服务。</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="list-grid" id="pipelineList"></div>
+        </div>
+      </article>
+    </section>
+
+    <div class="footer-note">
+      <strong>页面定位：</strong>甲方看到的应是治理功能本身的界面，包括数据源、规则、质量结果和服务发布，而不是仅看到对治理功能的文字说明。
+    </div>
+  </div>
+
+  <script src="重卡充电运营分析_共享数据.js"></script>
+  <script>
+    const App = window.HeavyTruckDashboard;
+    const state = { source: "realtime" };
+
+    const sourceLabels = {
+      realtime: "实时充电流",
+      history: "历史订单",
+      weather: "天气/日期",
+      price: "价格信号"
+    };
+
+    const sourceIssues = {
+      realtime: [
+        { name: "功率连续性", pass: "98.8%", abnormal: "12 条", action: "自动补齐" },
+        { name: "枪口状态", pass: "99.2%", abnormal: "5 条", action: "规则校验" },
+        { name: "站点编码", pass: "100%", abnormal: "0 条", action: "标准映射" }
+      ],
+      history: [
+        { name: "订单闭环", pass: "98.4%", abnormal: "9 条", action: "状态补正" },
+        { name: "充电时长", pass: "97.1%", abnormal: "16 条", action: "异常标记" },
+        { name: "订单去重", pass: "99.8%", abnormal: "2 条", action: "主键去重" }
+      ],
+      weather: [
+        { name: "时间对齐", pass: "99.5%", abnormal: "3 条", action: "窗口重采样" },
+        { name: "节假日标签", pass: "100%", abnormal: "0 条", action: "自动映射" },
+        { name: "温度补齐", pass: "97.9%", abnormal: "8 条", action: "相邻插值" }
+      ],
+      price: [
+        { name: "月份切换", pass: "100%", abnormal: "0 条", action: "规则生效" },
+        { name: "峰谷标签", pass: "100%", abnormal: "0 条", action: "自动映射" },
+        { name: "策略窗口", pass: "99.6%", abnormal: "1 条", action: "人工核验" }
+      ]
+    };
+
+    const sourceTrends = {
+      realtime: {
+        labels: ["10:00", "10:10", "10:20", "10:30", "10:40", "10:50"],
+        primary: [96.8, 97.1, 97.6, 98.0, 98.3, 98.6],
+        secondary: [10, 11, 13, 12, 9, 7],
+        notes: [
+          { title: "质量通过率", text: "反映实时充电流在近一小时内的治理通过率变化。" },
+          { title: "异常条数", text: "辅助观察实时链路中的状态波动和异常集中时段。" }
+        ]
+      },
+      history: {
+        labels: ["D-5", "D-4", "D-3", "D-2", "D-1", "D0"],
+        primary: [96.2, 96.8, 97.0, 97.4, 97.7, 97.9],
+        secondary: [22, 19, 17, 15, 13, 9],
+        notes: [
+          { title: "质量通过率", text: "反映历史订单在近几个批次处理中的治理稳定性。" },
+          { title: "异常条数", text: "用于识别订单闭环、时长异常和重复记录的清洗效果。" }
+        ]
+      },
+      weather: {
+        labels: ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00"],
+        primary: [97.6, 98.1, 98.5, 98.8, 99.0, 99.1],
+        secondary: [8, 7, 6, 5, 4, 3],
+        notes: [
+          { title: "质量通过率", text: "反映天气与日期标签在时间对齐后的可用性变化。" },
+          { title: "异常条数", text: "用于识别温度缺测、节假日映射和时间窗错位问题。" }
+        ]
+      },
+      price: {
+        labels: ["1月", "3月", "5月", "7月", "9月", "12月"],
+        primary: [100, 100, 100, 99.8, 100, 100],
+        secondary: [0, 0, 0, 1, 0, 0],
+        notes: [
+          { title: "质量通过率", text: "反映不同月份峰谷时段规则加载和标签映射的正确率。" },
+          { title: "异常条数", text: "主要用于识别策略窗口和规则切换边界的核验问题。" }
+        ]
+      }
+    };
+
+    const pipeline = [
+      { label: "数据接入", desc: "接口拉取、数据库同步、文件导入、消息订阅" },
+      { label: "ODS 落库", desc: "保留原始字段、时间戳和源标识，支持追溯核验" },
+      { label: "治理清洗", desc: "缺失补齐、异常识别、重复去除、时间对齐和编码映射" },
+      { label: "主题建模", desc: "形成负荷主题、订单主题、用户主题和价格信号主题宽表" },
+      { label: "服务发布", desc: "标准数据服务接口供画像、预测、调节和前端页面复用" }
+    ];
+
+    function renderPage(key) {
+      const scenario = App.getScenario(key);
+      const source = scenario.governance[state.source];
+      document.getElementById("scenarioTitle").textContent = scenario.title;
+      document.getElementById("scenarioNote").textContent = scenario.note;
+      App.renderMeta(document.getElementById("metaGrid"), scenario);
+      App.renderKpis(document.getElementById("kpiGrid"), scenario);
+
+      document.getElementById("sourceSwitch").innerHTML = Object.entries(sourceLabels).map(([value, label]) => `
+        <button class="pill-btn ${state.source === value ? "active" : ""}" data-source="${value}">${label}</button>
+      `).join("");
+
+      document.getElementById("sourceName").textContent = source.name;
+      document.getElementById("sourceRules").textContent = `规则覆盖：${source.rules}`;
+      document.getElementById("sourceOutput").textContent = source.output;
+      App.renderDualLineChart(document.getElementById("governanceChart"), {
+        labels: sourceTrends[state.source].labels,
+        primary: sourceTrends[state.source].primary,
+        secondary: sourceTrends[state.source].secondary,
+        primaryColor: "#b9e769",
+        secondaryColor: "#68d6c9"
+      });
+      document.getElementById("governanceNotes").innerHTML = sourceTrends[state.source].notes.map((item) => `
+        <div class="summary-card">
+          <div class="label">${item.title}</div>
+          <div class="desc">${item.text}</div>
+        </div>
+      `).join("");
+
+      document.getElementById("sourceStats").innerHTML = `
+        <div class="summary-card"><div class="label">数据时效</div><div class="value">${source.freshness}</div></div>
+        <div class="summary-card"><div class="label">质量通过率</div><div class="value">${source.quality}</div></div>
+        <div class="summary-card"><div class="label">治理视角</div><div class="value">${state.source === "price" ? "规则映射" : "质量校验"}</div></div>
+      `;
+
+      document.getElementById("qualityTable").innerHTML = `
+        <div class="table-row header"><span>校验项</span><span>通过率</span><span>异常数量</span><span>处理动作</span></div>
+        ${sourceIssues[state.source].map((item) => `
+          <div class="table-row">
+            <strong>${item.name}</strong>
+            <div class="bar-track"><b style="width:${item.pass};"></b></div>
+            <span>${item.abnormal}</span>
+            <span>${item.action}</span>
+          </div>
+        `).join("")}
+      `;
+
+      document.getElementById("pipelineList").innerHTML = pipeline.map((item) => `
+        <div class="info-card">
+          <div class="label">${item.label}</div>
+          <p class="muted">${item.desc}</p>
+        </div>
+      `).join("");
+    }
+
+    document.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-source]");
+      if (!button) return;
+      state.source = button.dataset.source;
+      renderPage(App.getScenarioKey());
+    });
+
+    App.renderPageLinks(document.getElementById("pageNav"), "重卡充电运营分析_01数据整合治理.html");
+    App.renderScenarioSwitch(document.getElementById("scenarioSwitch"), renderPage);
+    renderPage(App.getScenarioKey());
+  </script>
+</body>
+</html>

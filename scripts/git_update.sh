@@ -14,12 +14,13 @@ COMMIT_MSG="${1:-chore: update system files}"
 TRACKED_PATHS=(
   ".gitignore"
   "README_GIT.md"
+  "README.md"
   "scripts"
-  "原型系统"
-  "原型系统_vue版"
-  "原型系统_algo_python"
-  "原型系统_backend_java"
-  "原型系统联调说明.md"
+  "laiwu"
+  "laiwu_vue版"
+  "laiwu_algo_python"
+  "laiwu_backend_java"
+  "laiwu_联调说明.md"
   "技术路线.md"
 )
 

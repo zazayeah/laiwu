@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>辅助决策应用功能原型</title>
+  <link rel="stylesheet" href="重卡充电运营分析_共享样式.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <section class="brand-panel">
+        <div class="eyebrow">Function Page 06</div>
+        <h1>辅助决策应用</h1>
+        <p class="subtitle">本页对应规范书中的“充电运营优化与辅助决策应用”功能，演示策略生成、预警发布、运营日报和成果承载方式。</p>
+        <nav class="site-nav" id="pageNav"></nav>
+      </section>
+      <section class="scenario-panel">
+        <div class="scenario-head">
+          <div>
+            <h2 class="scenario-title" id="scenarioTitle">模拟场景</h2>
+            <div class="scenario-note" id="scenarioNote">模拟数据说明</div>
+          </div>
+          <div class="scenario-switch" id="scenarioSwitch"></div>
+        </div>
+        <div class="meta-grid" id="metaGrid"></div>
+      </section>
+    </header>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">策略指挥台</h3>
+          <div class="panel-desc">模拟策略包生成、运营日报输出和告警发布动作，体现结果如何被业务人员实际使用。</div>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="action-row" id="actionRow"></div>
+        <div class="status-note" id="decisionStatus">待生成策略包</div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:18px;">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">动作结果联动曲线</h3>
+          <div class="panel-desc">切换策略包、日报、预警动作后，图形视图同步变更，体现辅助决策应用不是静态展示。</div>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="legend" id="decisionLegend"></div>
+        <div class="chart-shell">
+          <svg id="decisionChart" viewBox="0 0 920 360" aria-label="辅助决策联动图"></svg>
+        </div>
+        <div class="chart-notes" id="decisionNotes"></div>
+      </div>
+    </section>
+
+    <section class="two-col" style="margin-top:18px;">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-title">策略建议单</h3>
+            <div class="panel-desc">面向运营人员的策略执行清单。</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="list-grid" id="strategyList"></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-title">预警事件流</h3>
+            <div class="panel-desc">面向监测人员和管理人员的滚动预警结果。</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="list-grid" id="alertList"></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel" style="margin-top:18px;">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">成果承载形态</h3>
+          <div class="panel-desc">不仅有可视化页面，还包括数据产品报告和标准化接口服务。</div>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="triple-grid">
+          <div class="info-card"><div class="label">专题页面</div><strong>总览页、站点分析页、策略页、预警页</strong><p class="muted">支撑业务人员在线研判和管理查看。</p></div>
+          <div class="info-card"><div class="label">数据产品</div><strong>运营日报、策略清单、预测摘要、周报</strong><p class="muted">支撑报送、汇报和归档使用。</p></div>
+          <div class="info-card"><div class="label">接口服务</div><strong>画像结果接口、预测结果接口、调节潜力接口</strong><p class="muted">支撑后续平台调用和成果复用。</p></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="重卡充电运营分析_共享数据.js"></script>
+  <script>
+    const App = window.HeavyTruckDashboard;
+    const state = { action: "strategy" };
+
+    function getDecisionView(scenario, action) {
+      if (action === "strategy") {
+        const labels = ["10:00", "12:00", "14:00", "16:00", "18:00", "20:00"];
+        const baseline = [10, 12, 13, 12, 14.6, 15.2].map((value, index) => Number((value * (scenario.forecastLoad[10 + index * 2] / scenario.forecastLoad[18])).toFixed(1)));
+        const optimized = baseline.map((value, index) => {
+          if (index === 1 || index === 2) return Number((value + 0.9).toFixed(1));
+          if (index >= 4) return Number((value - 1.1 + index * 0.2).toFixed(1));
+          return value;
+        });
+        return {
+          legend: `
+            <span><i style="background:#b9e769;"></i>策略执行后</span>
+            <span><i style="background:#68d6c9;"></i>执行前基线</span>
+          `,
+          status: "已加载站点策略包视图：重点展示峰谷转移后的负荷优化结果。",
+          notes: [
+            { title: "策略目标", text: "把可延后订单向午间或低谷时段转移，压降晚高峰负荷。"},
+            { title: "执行结果", text: "图中可直接看到 18:00-20:00 的峰段被压降，12:00-14:00 承接增加。"},
+            { title: "业务承接", text: "可同步生成站点级策略单，推送给运营人员执行。" }
+          ],
+          labels,
+          primary: optimized,
+          secondary: baseline
+        };
+      }
+
+      if (action === "report") {
+        const base = App.numericValue(scenario.kpis[0].value);
+        const labels = ["D-6", "D-5", "D-4", "D-3", "D-2", "D-1", "D0"];
+        return {
+          legend: `
+            <span><i style="background:#b9e769;"></i>日报统计值</span>
+            <span><i style="background:#68d6c9;"></i>计划值</span>
+          `,
+          status: "已加载运营日报视图：用于展示近一周期总量、计划偏差和趋势摘要。",
+          notes: [
+            { title: "日报用途", text: "把近一周总量、峰值和策略执行偏差压缩成日报视图，方便汇报和归档。"},
+            { title: "趋势识别", text: "日报曲线可快速识别总量上升、回落或偏离计划的时间点。"},
+            { title: "数据承接", text: "后续可输出为日报 PDF、专题报表或接口数据。" }
+          ],
+          labels,
+          primary: [0.9, 0.94, 0.97, 1.01, 1.03, 0.99, 1].map((value) => Number((base * value).toFixed(1))),
+          secondary: [0.88, 0.92, 0.95, 0.98, 1, 0.97, 0.99].map((value) => Number((base * value).toFixed(1)))
+        };
+      }
+
+      return {
+        legend: `
+          <span><i style="background:#b9e769;"></i>风险指数</span>
+          <span><i style="background:#68d6c9;"></i>预警阈值</span>
+        `,
+        status: "已加载预警视图：当前场景中的重点站点和关键时段告警已进入消息队列。",
+        notes: [
+          { title: "预警目标", text: "监测负荷抬升、站点利用率和价格窗口重叠带来的风险。"},
+          { title: "触发逻辑", text: "当风险指数超过阈值线时，系统自动推送站点预警和处置建议。"},
+          { title: "运营动作", text: "可直接联动分流、降功率和预约释放策略，形成闭环处理。" }
+        ],
+        labels: ["08:00", "10:00", "12:00", "14:00", "18:00", "20:00"],
+        primary: [48, 57, 64, 59, 82, 88],
+        secondary: [62, 62, 62, 62, 62, 62]
+      };
+    }
+
+    function renderPage(key) {
+      const scenario = App.getScenario(key);
+      const decisionView = getDecisionView(scenario, state.action);
+      document.getElementById("scenarioTitle").textContent = scenario.title;
+      document.getElementById("scenarioNote").textContent = scenario.note;
+      App.renderMeta(document.getElementById("metaGrid"), scenario);
+      document.getElementById("actionRow").innerHTML = `
+        <button class="action-btn ${state.action === "strategy" ? "primary" : ""}" data-action="strategy">生成站点策略包</button>
+        <button class="action-btn ${state.action === "report" ? "primary" : ""}" data-action="report">导出运营日报</button>
+        <button class="action-btn ${state.action === "alert" ? "primary" : ""}" data-action="alert">发布预警通知</button>
+      `;
+      document.getElementById("decisionStatus").textContent = decisionView.status;
+      document.getElementById("decisionLegend").innerHTML = decisionView.legend;
+      App.renderDualLineChart(document.getElementById("decisionChart"), {
+        labels: decisionView.labels,
+        primary: decisionView.primary,
+        secondary: decisionView.secondary,
+        primaryColor: "#b9e769",
+        secondaryColor: "#68d6c9"
+      });
+      document.getElementById("decisionNotes").innerHTML = decisionView.notes.map((item) => `
+        <div class="summary-card"><div class="label">${item.title}</div><div class="desc">${item.text}</div></div>
+      `).join("");
+
+      document.getElementById("strategyList").innerHTML = scenario.strategies.map((item) => `
+        <div class="info-card">
+          <div class="label">${item.level}</div>
+          <strong>${item.name}</strong>
+          <p class="muted">${item.action}</p>
+          <div class="chip-row">
+            <span class="chip">${item.trigger}</span>
+            <span class="chip">${item.gain}</span>
+          </div>
+        </div>
+      `).join("");
+
+      document.getElementById("alertList").innerHTML = scenario.alerts.map((item) => `
+        <div class="info-card">
+          <div class="label">${item.time}</div>
+          <strong>${item.title}</strong>
+          <p class="muted">${item.text}</p>
+        </div>
+      `).join("");
+    }
+
+    document.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-action]");
+      if (!button) return;
+      state.action = button.dataset.action;
+      renderPage(App.getScenarioKey());
+    });
+
+    App.renderPageLinks(document.getElementById("pageNav"), "重卡充电运营分析_06辅助决策应用.html");
+    App.renderScenarioSwitch(document.getElementById("scenarioSwitch"), renderPage);
+    renderPage(App.getScenarioKey());
+  </script>
+</body>
+</html>

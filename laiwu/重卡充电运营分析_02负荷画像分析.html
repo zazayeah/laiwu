@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>负荷画像分析功能原型</title>
+  <link rel="stylesheet" href="重卡充电运营分析_共享样式.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <section class="brand-panel">
+        <div class="eyebrow">Function Page 02</div>
+        <h1>负荷画像分析</h1>
+        <p class="subtitle">本页对应规范书中的“多维度负荷特征画像构建”功能，重点演示历史与实时负荷汇聚融合后的时序特征评估、波动性与冲击性评估，以及负荷曲线聚类分析。</p>
+        <nav class="site-nav" id="pageNav"></nav>
+      </section>
+      <section class="scenario-panel">
+        <div class="scenario-head">
+          <div>
+            <h2 class="scenario-title" id="scenarioTitle">模拟场景</h2>
+            <div class="scenario-note" id="scenarioNote">模拟数据说明</div>
+          </div>
+          <div class="scenario-switch" id="scenarioSwitch"></div>
+        </div>
+        <div class="meta-grid" id="metaGrid"></div>
+      </section>
+    </header>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">历史+实时负荷融合画像</h3>
+          <div class="panel-desc">切换不同站点后，页面同步更新该站点的时序规律、波动冲击指标和所属曲线聚类结果，体现规范书要求的精细化负荷画像构建能力。</div>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="pill-row" id="stationSwitch"></div>
+        <div class="two-col">
+          <div class="card-grid">
+            <div class="summary-card">
+              <div class="label">当前站点</div>
+              <div class="value" id="stationName" style="font-size:28px;font-weight:700;"></div>
+              <div class="desc" id="stationTag"></div>
+            </div>
+            <div class="stat-grid" id="stationStats"></div>
+          </div>
+          <article class="panel" style="background:transparent;border:none;box-shadow:none;">
+            <div class="chart-shell">
+              <div class="legend">
+                <span><i style="background:#b9e769;"></i>当前站点融合负荷</span>
+                <span><i style="background:#68d6c9;"></i>同站点预测负荷</span>
+              </div>
+              <svg id="loadChart" viewBox="0 0 920 360" aria-label="负荷趋势图"></svg>
+            </div>
+            <div class="chart-notes" id="loadChartNotes"></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="two-col" style="margin-top:18px;">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-title">时序特征评估</h3>
+            <div class="panel-desc">对应规范书中的时序特征评估，突出日内规律、峰谷结构和关键时段负荷分布。</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="bar-list" id="timeBars"></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-title">波动性与冲击性评估</h3>
+            <div class="panel-desc">对应规范书中的波动性与冲击性评估，输出峰谷差、波动系数、短时冲击次数等关键指标。</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="card-grid" id="volatilityCards"></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="two-col" style="margin-top:18px;">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-title">负荷曲线聚类结果</h3>
+            <div class="panel-desc">对应规范书中的负荷曲线聚类分析，展示站点所属典型模式及与各类模式的相似度。</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="table-grid" id="clusterTable"></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-title">画像结果沉淀</h3>
+            <div class="panel-desc">聚类模式、波动标签和时序标签会被沉淀为标准画像结果，供后续预测和调节潜力评估复用。</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="card-grid" id="profileCards"></div>
+        </div>
+      </article>
+    </section>
+  </div>
+
+  <script src="重卡充电运营分析_共享数据.js"></script>
+  <script>
+    const App = window.HeavyTruckDashboard;
+    const state = { stationIndex: 0 };
+
+    const clusterTemplates = [
+      {
+        name: "午间消纳型",
+        desc: "午间谷段抬升明显，适合承接新能源友好消纳负荷。",
+        sims: [92, 68, 54, 47],
+        bias: { night: 0.03, midday: 0.18, evening: -0.06 }
+      },
+      {
+        name: "峰段敏感型",
+        desc: "晚高峰抬升明显，峰段挤兑和并发冲击需重点监测。",
+        sims: [61, 93, 58, 66],
+        bias: { night: -0.02, midday: -0.05, evening: 0.19 }
+      },
+      {
+        name: "谷段承接型",
+        desc: "夜谷承接能力强，更适合柔性订单预约转移。",
+        sims: [56, 63, 91, 72],
+        bias: { night: 0.16, midday: 0.04, evening: -0.03 }
+      },
+      {
+        name: "混合运营型",
+        desc: "多峰并存，日内差异复杂，适合做精细化策略分层。",
+        sims: [49, 64, 71, 90],
+        bias: { night: 0.06, midday: 0.09, evening: 0.11 }
+      }
+    ];
+
+    function buildStationSeries(scenario, station, pattern) {
+      const loadValue = App.numericValue(station.load);
+      const baseAvg = App.avgSlice(scenario.actualLoad, 0, scenario.actualLoad.length);
+      const scale = loadValue / baseAvg;
+      const congestion = station.progress / 100;
+
+      const projectPoint = (value, index, source) => {
+        let factor = 1 + congestion * 0.08;
+        if (index < 6 || index >= 22) factor += pattern.bias.night;
+        if (index >= 11 && index < 14) factor += pattern.bias.midday;
+        if (index >= 18 && index < 22) factor += pattern.bias.evening;
+        if (index >= 8 && index < 10) factor += 0.04;
+        if (source === "forecast") factor += 0.02;
+        return Number((value * scale * factor).toFixed(2));
+      };
+
+      return {
+        labels: scenario.actualLoad.map((_, index) => `${String(index).padStart(2, "0")}:00`),
+        actual: scenario.actualLoad.map((value, index) => projectPoint(value, index, "actual")),
+        forecast: scenario.forecastLoad.map((value, index) => projectPoint(value, index, "forecast"))
+      };
+    }
+
+    function renderPage(key) {
+      const scenario = App.getScenario(key);
+      const station = scenario.stations[state.stationIndex];
+      document.getElementById("scenarioTitle").textContent = scenario.title;
+      document.getElementById("scenarioNote").textContent = scenario.note;
+      App.renderMeta(document.getElementById("metaGrid"), scenario);
+
+      document.getElementById("stationSwitch").innerHTML = scenario.stations.map((item, index) => `
+        <button class="pill-btn ${index === state.stationIndex ? "active" : ""}" data-station="${index}">${item.name}</button>
+      `).join("");
+
+      const factor = station.progress / 100;
+      const maxLoad = Math.max(...scenario.actualLoad) * factor;
+      const minLoad = Math.min(...scenario.actualLoad) * factor;
+      const volatility = ((maxLoad - minLoad) / maxLoad).toFixed(2);
+      const realtimePeak = Math.max(...scenario.actualLoad.slice(16, 22)) * factor;
+      const middayMean = App.avgSlice(scenario.actualLoad, 11, 14) * factor;
+      const shockCount = Math.max(1, Math.round((realtimePeak - middayMean) * 1.4));
+      const peakDuration = station.progress > 85 ? "2.5 小时" : station.progress > 70 ? "1.8 小时" : "1.2 小时";
+      const patternIndex = state.stationIndex % 4;
+      const pattern = clusterTemplates[patternIndex];
+      const stationSeries = buildStationSeries(scenario, station, pattern);
+      const stationPeak = stationSeries.actual.reduce((max, value, index) => value > max.value ? { value, index } : max, { value: stationSeries.actual[0], index: 0 });
+
+      App.renderDualLineChart(document.getElementById("loadChart"), {
+        labels: stationSeries.labels,
+        primary: stationSeries.actual,
+        secondary: stationSeries.forecast,
+        primaryColor: "#b9e769",
+        secondaryColor: "#68d6c9"
+      });
+      document.getElementById("loadChartNotes").innerHTML = `
+        <div class="summary-card"><div class="label">曲线主峰时段</div><div class="desc">${stationSeries.labels[stationPeak.index]} 附近达到 ${stationPeak.value.toFixed(1)} MW，切换站点后会同步刷新。</div></div>
+        <div class="summary-card"><div class="label">当前聚类模式</div><div class="desc">${pattern.name}，${pattern.desc}</div></div>
+        <div class="summary-card"><div class="label">画像复用价值</div><div class="desc">当前站点可平移空间 ${station.shift}，后续预测和调节潜力模块可直接复用该曲线标签。</div></div>
+      `;
+
+      document.getElementById("stationName").textContent = station.name;
+      document.getElementById("stationTag").textContent = `站点状态：${station.status} | 实时利用率：${station.use} | 历史+实时融合画像已生成`;
+      document.getElementById("stationStats").innerHTML = `
+        <div class="summary-card"><div class="label">当前负荷</div><div class="value">${station.load}</div></div>
+        <div class="summary-card"><div class="label">峰谷差</div><div class="value">${(maxLoad - minLoad).toFixed(1)} MW</div></div>
+        <div class="summary-card"><div class="label">波动系数</div><div class="value">${volatility}</div></div>
+      `;
+
+      const labels = ["凌晨 00-06", "上午 06-12", "午间 12-16", "晚间 16-22"];
+      const ranges = [[0, 6], [6, 12], [12, 16], [16, 22]];
+      document.getElementById("timeBars").innerHTML = ranges.map((range, index) => {
+        const avg = App.avgSlice(scenario.actualLoad, range[0], range[1]) * factor;
+        const percent = Math.min(100, Math.round(avg / Math.max(...scenario.actualLoad) * 100));
+        return `
+          <div class="bar-row">
+            <strong>${labels[index]}</strong>
+            <div class="bar-track"><b style="width:${percent}%;"></b></div>
+            <span>${avg.toFixed(1)} MW ${index === 2 ? "· 谷段抬升" : index === 3 ? "· 峰段集中" : "· 常规运行"}</span>
+          </div>
+        `;
+      }).join("");
+
+      document.getElementById("volatilityCards").innerHTML = `
+        <div class="info-card"><div class="label">峰谷差</div><strong>${(maxLoad - minLoad).toFixed(1)} MW</strong><p class="muted">用于评估站点日内波动幅度和峰谷结构差异。</p></div>
+        <div class="info-card"><div class="label">峰值持续时长</div><strong>${peakDuration}</strong><p class="muted">用于判断峰值是否持续和是否需要持续性调控。</p></div>
+        <div class="info-card"><div class="label">短时冲击次数</div><strong>${shockCount} 次/日</strong><p class="muted">用于识别负荷突增和瞬时冲击风险。</p></div>
+        <div class="info-card"><div class="label">冲击强度</div><strong>${(realtimePeak - middayMean).toFixed(1)} MW</strong><p class="muted">用于评估峰值抬升对站点和区域负荷的冲击程度。</p></div>
+      `;
+
+      document.getElementById("clusterTable").innerHTML = `
+        <div class="table-row header"><span>聚类类型</span><span>模式说明</span><span>相似度</span><span>当前归属</span></div>
+        ${clusterTemplates.map((item, index) => `
+          <div class="table-row">
+            <strong>${item.name}</strong>
+            <span>${item.desc}</span>
+            <span>${item.sims[state.stationIndex]}%</span>
+            <span>${index === patternIndex ? "当前模式" : "候选模式"}</span>
+          </div>
+        `).join("")}
+      `;
+
+      document.getElementById("profileCards").innerHTML = `
+        <div class="info-card"><div class="label">时序标签</div><strong>工作日峰谷差异明显</strong><p class="muted">完成日内规律、峰谷分布和关键时段识别。</p></div>
+        <div class="info-card"><div class="label">波动标签</div><strong>短时波动 ${volatility}</strong><p class="muted">完成波动性与冲击性评估，可供预警与调节使用。</p></div>
+        <div class="info-card"><div class="label">聚类标签</div><strong>${pattern.name}</strong><p class="muted">完成负荷曲线聚类，沉淀为标准模式标签。</p></div>
+        <div class="info-card"><div class="label">复用价值</div><strong>${station.shift}</strong><p class="muted">画像结果为后续预测和调节潜力评估提供统一特征输入。</p></div>
+      `;
+    }
+
+    document.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-station]");
+      if (!button) return;
+      state.stationIndex = Number(button.dataset.station);
+      renderPage(App.getScenarioKey());
+    });
+
+    App.renderPageLinks(document.getElementById("pageNav"), "重卡充电运营分析_02负荷画像分析.html");
+    App.renderScenarioSwitch(document.getElementById("scenarioSwitch"), renderPage);
+    renderPage(App.getScenarioKey());
+  </script>
+</body>
+</html>
